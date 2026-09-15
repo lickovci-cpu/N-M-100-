@@ -11,6 +11,7 @@ function clean(v, max = 500) { return String(v ?? '').trim().slice(0, max); }
 function hash(v) { return createHash('sha256').update(JSON.stringify(v)).digest('hex'); }
 
 export default async function handler(req, res) {
+  if (req.method === 'GET') return json(res, 200, { ok: true, configured: !!SECRET });
   if (req.method !== 'POST') return json(res, 405, { error: 'METHOD_NOT_ALLOWED' });
   if (!SECRET) return json(res, 503, { error: 'BCO_INTEGRATION_SECRET_NOT_CONFIGURED' });
 
