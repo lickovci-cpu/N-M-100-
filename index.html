@@ -38,6 +38,20 @@ function renderProducts(){let arr=selected==='Vše'?PRODUCTS:PRODUCTS.filter(p=>
 function add(id){let p=PRODUCTS.find(x=>x.id===id);cart.push(p);updateCart();document.getElementById('cart').classList.add('open')}
 function updateCart(){count.textContent=cart.length;cartItems.innerHTML=cart.length?cart.map((p,i)=>`<div class="cartItem"><img src="assets/${p.img}"><div><b>${p.name}</b><br><small class="muted">${money(p.price)} • velikost doplníme v objednávce</small></div><button class="iconbtn" onclick="cart.splice(${i},1);updateCart()">×</button></div>`).join(''):'<p class="muted">Košík je prázdný.</p>'}
 function toggleCart(){document.getElementById('cart').classList.toggle('open')}
-function checkout(){if(!cart.length)return;let lines=cart.map((p,i)=>`${i+1}. ${p.name} — ${money(p.price)}`).join('\n');let msg=`Ahoj, mám zájem o NŘŠM objednávku:\n\n${lines}\n\nProsím o potvrzení velikostí, dostupnosti, dopravy a finální ceny.`;window.open('https://wa.me/420770357242?text='+encodeURIComponent(msg),'_blank')}
+async function checkout(){
+  if(!cart.length)return;
+  const items=cart.map(p=>({product_id:p.id,product_name:p.name,quantity:1,unit_price:p.price,line_total:p.price,sku:p.id,variant:{}}));
+  const subtotal=items.reduce((s,x)=>s+x.line_total,0);
+  const eventId='checkout-'+Date.now()+'-'+Math.random().toString(36).slice(2,10);
+  const payload={source:'nrsn-web',currency:'CZK',subtotal,shipping:0,total:subtotal,items,customer_note:'Zájem o NŘŠM objednávku přes web.',page_url:location.href};
+  let sent=false;
+  try{
+    const r=await fetch('/api/bco',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event_type:'checkout.created',event_id:eventId,payload})});
+    sent=r.ok;
+  }catch(e){console.warn('BCO checkout bridge unavailable',e)}
+  const lines=cart.map((p,i)=>`${i+1}. ${p.name} — ${money(p.price)}`).join('\n');
+  const msg=`Ahoj, mám zájem o NŘŠM objednávku:\n\n${lines}\n\nProsím o potvrzení velikostí, dostupnosti, dopravy a finální ceny.${sent?'\n\nObjednávka byla zároveň zaznamenána do systému.':''}`;
+  window.open('https://wa.me/420770357242?text='+encodeURIComponent(msg),'_blank');
+}
 renderFilters();renderProducts();updateCart();
 </script></body></html>
